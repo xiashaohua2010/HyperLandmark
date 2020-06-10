@@ -3,11 +3,10 @@ package com.hyq.hm.hyperlandmark;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.PointF;
 import android.graphics.Rect;
 import android.hardware.Camera;
-import android.opengl.GLES20;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -15,21 +14,19 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Toast;
-
-import com.zeusee.zmobileapi.STUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import zeusees.tracking.Face;
 import zeusees.tracking.FaceTracking;
@@ -87,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
     private FaceTracking mMultiTrack106 = null;
     private boolean mTrack106 = false;
+    Context mContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
             init();
         }
 
-
+        mContext = this;
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -152,10 +150,14 @@ public class MainActivity extends AppCompatActivity {
     private GLFrame mFrame;
     private GLPoints mPoints;
     private GLBitmap mBitmap;
+    private ImageView maskImage;
+    private GLBitmap mMaskImage;
 
     private SeekBar seekBarA;
     private SeekBar seekBarB;
     private SeekBar seekBarC;
+    private static int mCounter = 0;
+    private static int oldType = 0xff;
     private void init(){
         InitModelFiles();
 
@@ -167,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
         mFrame = new GLFrame();
         mPoints = new GLPoints();
         mBitmap = new GLBitmap(this,R.drawable.ic_logo);
+        mMaskImage = new GLBitmap(this,R.drawable.mask_all_1);
         mHandlerThread = new HandlerThread("DrawFacePointsThread");
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
@@ -194,10 +197,24 @@ public class MainActivity extends AppCompatActivity {
                         }
                         boolean rotate270 = cameraOverlap.getOrientation() == 270;
 
-                        List<Face> faceActions = mMultiTrack106.getTrackingInfo();
+
+
+                        mCounter++;
+                        Log.d("=============","onPreviewFrame mCounter=" + mCounter);
+                        if(mCounter % 33 == 0) {
+                            Random random = new Random();
+                            int type = random.nextInt(4);
+                            int id = getMaskImage(type);
+                            mCounter = 0;
+                            mMaskImage.setBitmap(mContext,id);
+                            mMaskImage.initFrame(CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH);
+                            oldType = type;
+                        }
+                        List<Face> faces = mMultiTrack106.getTrackingFaces();
                         float[] p = null;
+                        float[] p2 = null;
                         float[] points = null;
-                        for (Face r : faceActions) {
+                        for (Face r : faces) {
                             points = new float[106*2];
                             Rect rect=new Rect(CameraOverlap.PREVIEW_HEIGHT - r.left,r.top,CameraOverlap.PREVIEW_HEIGHT - r.right,r.bottom);
                             for(int i = 0 ; i < 106 ; i++) {
@@ -221,6 +238,104 @@ public class MainActivity extends AppCompatActivity {
                                     p[6] = view2openglX(x - 20,CameraOverlap.PREVIEW_HEIGHT);
                                     p[7] = view2openglY(y + 20,CameraOverlap.PREVIEW_WIDTH);
                                 }
+
+                                if(oldType == 0) {
+                                    //all
+                                    if (i == 11) {
+                                        p2 = new float[8];
+                                        p2[6] = view2openglX(x - 50, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[7] = view2openglY(y - 200, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 13) {
+                                        p2[4] = view2openglX(x + 50, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[5] = view2openglY(y - 200, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 80) {
+                                        p2[2] = view2openglX(x - 50, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[3] = view2openglY(y + 50, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 100) {
+                                        p2[0] = view2openglX(x + 50, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[1] = view2openglY(y + 50, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                } else if(oldType == 1){
+                                    //eye
+                                    if (i == 11) {
+                                        p2[6] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[7] = view2openglY(y - 120, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 13) {
+                                        p2[4] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[5] = view2openglY(y - 120, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 7) {
+                                        p2 = new float[8];
+                                        p2[2] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[3] = view2openglY(y + 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 16) {
+                                        p2[0] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[1] = view2openglY(y + 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                } else if(oldType == 2){
+                                    //mask
+                                    if (i == 7) {
+                                        p2 = new float[8];
+                                        p2[6] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[7] = view2openglY(y - 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 16) {
+                                        p2[4] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[5] = view2openglY(y - 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 81) {
+                                        p2[2] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[3] = view2openglY(y + 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 98) {
+                                        p2[0] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[1] = view2openglY(y + 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                } else if(oldType == 3){
+                                    //head
+                                    if (i == 11) {
+                                        p2[6] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[7] = view2openglY(y - 280, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 13) {
+                                        p2[4] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[5] = view2openglY(y - 280, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 9) {
+                                        p2 = new float[8];
+                                        p2[2] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[3] = view2openglY(y + 40, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 16) {
+
+                                        p2[0] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[1] = view2openglY(y + 40, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                } else {
+                                    //default
+                                    if (i == 11) {
+                                        p2 = new float[8];
+                                        p2[6] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[7] = view2openglY(y - 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 13) {
+                                        p2[4] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[5] = view2openglY(y - 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 80) {
+                                        p2[2] = view2openglX(x - 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[3] = view2openglY(y + 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                    if (i == 100) {
+                                        p2[0] = view2openglX(x + 20, CameraOverlap.PREVIEW_HEIGHT);
+                                        p2[1] = view2openglY(y + 20, CameraOverlap.PREVIEW_WIDTH);
+                                    }
+                                }
                             }
                             if(p != null){
                                 break;
@@ -232,6 +347,13 @@ public class MainActivity extends AppCompatActivity {
                             tid = mBitmap.drawFrame();
                         }
                         mFrame.drawFrame(tid,mFramebuffer.drawFrameBuffer(),mFramebuffer.getMatrix());
+
+                        if(p2 != null){
+                            mMaskImage.setPoints(p2);
+                            tid = mMaskImage.drawFrame();
+                        }
+                        mFrame.drawFrame(tid,mFramebuffer.drawFrameBuffer(),mFramebuffer.getMatrix());
+
                         if(points != null){
                             mPoints.setPoints(points);
                             mPoints.drawPoints();
@@ -265,6 +387,7 @@ public class MainActivity extends AppCompatActivity {
                         mFrame.setSize(width,height, CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH );
                         mPoints.initPoints();
                         mBitmap.initFrame(CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH);
+                        mMaskImage.initFrame(CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH);
                         cameraOverlap.openCamera(mFramebuffer.getSurfaceTexture());
                     }
                 });
@@ -281,6 +404,7 @@ public class MainActivity extends AppCompatActivity {
                         mFrame.release();
                         mPoints.release();
                         mBitmap.release();
+                        mMaskImage.release();
                         if(mEglUtils != null){
                             mEglUtils.release();
                             mEglUtils = null;
@@ -304,6 +428,7 @@ public class MainActivity extends AppCompatActivity {
                     mFrame.setSize(mSurfaceView.getWidth(),mSurfaceView.getHeight(), CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH );
                     mPoints.initPoints();
                     mBitmap.initFrame(CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH);
+                    mMaskImage.initFrame(CameraOverlap.PREVIEW_HEIGHT,CameraOverlap.PREVIEW_WIDTH);
                     cameraOverlap.openCamera(mFramebuffer.getSurfaceTexture());
                 }
             });
@@ -311,6 +436,7 @@ public class MainActivity extends AppCompatActivity {
         seekBarA = findViewById(R.id.seek_bar_a);
         seekBarB = findViewById(R.id.seek_bar_b);
         seekBarC = findViewById(R.id.seek_bar_c);
+        //maskImage = findViewById(R.id.mask_image);
     }
     private float view2openglX(int x,int width){
         float centerX = width/2.0f;
@@ -322,5 +448,59 @@ public class MainActivity extends AppCompatActivity {
         float s = centerY - y;
         return s/centerY;
     }
+
+    private int[] mask_all = {
+            R.drawable.mask_all_1,
+            R.drawable.mask_all_2,
+            R.drawable.mask_all_3,
+            R.drawable.mask_devil_1,
+            R.drawable.mask_jj_1,
+            R.drawable.mask_jj_2,
+            R.drawable.mask_jj_3,
+            R.drawable.mask_jj_4
+    };
+    private int[] mask_eye = {
+            R.drawable.mask_eye_1,
+            R.drawable.mask_eye_2,
+            R.drawable.mask_eye_3,
+            R.drawable.mask_eye_4,
+            R.drawable.mask_eye_5,
+            R.drawable.mask_eye_6
+    };
+
+    private int[] mask_mask = {
+            R.drawable.mask_mask_1,
+            R.drawable.mask_mask_2,
+            R.drawable.mask_mask_3
+    };
+
+    private int[] mask_head = {
+            R.drawable.mask_head_1
+    };
+
+    private int getMaskImage(int type){
+
+        Log.d("=============","getMaskImage type=" + type);
+        Random random = new Random();
+
+         int index;
+        int id;
+
+        if(type == 0) {
+            index = random.nextInt(7);
+            id = mask_all[index];
+        }else if(type == 1) {
+            index = random.nextInt(6);
+            id = mask_eye[index];
+        }else if(type == 2) {
+            index = random.nextInt(3);
+            id = mask_mask[index];
+        }else {
+            id = mask_head[0];
+        }
+        Log.d("=============","getMaskImage id=" + id);
+        return id;
+    }
+
 
 }
