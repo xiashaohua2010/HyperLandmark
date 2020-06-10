@@ -99,6 +99,11 @@ public class GLBitmap {
         vertexBuffer.put(points);
         vertexBuffer.position(0);
     }
+
+    public void setBitmap(Context context, int id){
+        bitmap = BitmapFactory.decodeResource(context.getResources(),id);
+    }
+
     private int width,height;
     public int drawFrame(){
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER,frameBuffers[0]);
