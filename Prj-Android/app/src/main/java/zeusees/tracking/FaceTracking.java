@@ -61,11 +61,12 @@ public class FaceTracking {
             int[] faceRect = getTrackingLocationByIndex( i,session);
             int id = getTrackingIDByIndex(i,session);
             Face face = new Face(faceRect[0], faceRect[1], faceRect[2], faceRect[3], landmarks,id);
+            Log.d("Face id=",id+"");
             faces.add(face);
         }
     }
 
-    public List<Face> getTrackingInfo(){
+    public List<Face> getTrackingFaces(){
         return faces;
 
     }
